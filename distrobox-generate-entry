@@ -365,13 +365,19 @@ TryExec=${distrobox_path}/distrobox
 Type=Application
 EOF
 
-# Konsole profile
+# Profiles for Konsole
 if [ -d "${HOME}/.local/share/konsole" ]; then
+if [ -f "${HOME}/.config/konsolerc" ]; then
+	# Use Konsole's main profile as the parent, else use "FALLBACK/".
+	konsole_profile_parent="$(grep DefaultProfile "${HOME}/.config/konsolerc" | cut -c16-)"
+else
+	konsole_profile_parent="FALLBACK/"
+fi
 cat << EOF > "${HOME}/.local/share/konsole/${container_name}.profile"
 [General]
 Command=${distrobox_path}/distrobox enter ${extra_flags} ${container_name}
 Icon=${icon}
 Name=${container_name}
-Parent=FALLBACK/
+Parent=${konsole_profile_parent}
 EOF
 fi
