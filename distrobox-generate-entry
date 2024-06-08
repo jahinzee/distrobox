@@ -201,6 +201,9 @@ fi
 # If we delete, just ask confirmation and exit.
 if [ "${delete}" -ne 0 ]; then
 	rm -f "${HOME}/.local/share/applications/${container_name}.desktop"
+	if [ -d "${HOME}/.local/share/konsole" ]; then
+		rm -f "${HOME}/.local/share/konsole/${container_name}.profile"
+	fi
 	exit
 fi
 
@@ -361,3 +364,14 @@ Terminal=true
 TryExec=${distrobox_path}/distrobox
 Type=Application
 EOF
+
+# Konsole profile
+if [ -d "${HOME}/.local/share/konsole" ]; then
+cat << EOF > "${HOME}/.local/share/konsole/${container_name}.profile"
+[General]
+Command=${distrobox_path}/distrobox enter ${extra_flags} ${container_name}
+Icon=${icon}
+Name=${container_name}
+Parent=FALLBACK/
+EOF
+fi
