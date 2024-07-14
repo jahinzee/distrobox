@@ -62,7 +62,7 @@ container_clone=""
 container_generate_entry=1
 container_home_prefix=""
 container_image=""
-container_image_default="registry.fedoraproject.org/fedora-toolbox:39"
+container_image_default="registry.fedoraproject.org/fedora-toolbox:latest"
 container_init_hook=""
 container_manager="autodetect"
 container_manager_additional_flags=""
@@ -184,7 +184,7 @@ Usage:
 	distrobox create -i docker.io/almalinux/8-init --init --name test --pre-init-hooks "dnf config-manager --enable powertools && dnf -y install epel-release"
 	distrobox create --clone fedora-39 --name fedora-39-copy
 	distrobox create --image alpine my-alpine-container
-	distrobox create --image registry.fedoraproject.org/fedora-toolbox:39 --name fedora-toolbox-39
+	distrobox create --image registry.fedoraproject.org/fedora-toolbox:latest --name fedora-toolbox-latest
 	distrobox create --pull --image centos:stream9 --home ~/distrobox/centos9
 	distrobox create --image alpine:latest --name test2 --additional-packages "git tmux vim"
 	distrobox create --image ubuntu:22.04 --name ubuntu-nvidia --nvidia
@@ -208,8 +208,8 @@ Options:
 	--volume:		additional volumes to add to the container
 	--additional-flags/-a:	additional flags to pass to the container manager command
 	--additional-packages/-ap:	additional packages to install during initial container setup
-	--init-hooks:		additional commands to execute during container initialization
-	--pre-init-hooks:	additional commands to execute prior to container initialization
+	--init-hooks:		additional commands to execute at the end of container initialization
+	--pre-init-hooks:	additional commands to execute at the start of container initialization
 	--init/-I:		use init system (like systemd) inside the container.
 				this will make host's processes not visible from within the container. (assumes --unshare-process)
 				may require additional packages depending on the container image: https://github.com/89luca89/distrobox/blob/main/docs/useful_tips.md#using-init-system-inside-a-distrobox

@@ -53,6 +53,7 @@ delete=0
 icon="auto"
 icon_default="${HOME}/.local/share/icons/terminal-distrobox-icon.svg"
 verbose=0
+online=0
 version="1.7.2.1"
 
 # Source configuration files, this is done in an hierarchy so local files have
@@ -182,7 +183,7 @@ if [ "${verbose}" -ne 0 ]; then
 	set -o xtrace
 fi
 
-if [ -z "${container_name}" ]; then
+if [ -z "${container_name:-}" ]; then
 	container_name="${container_name_default}"
 fi
 
@@ -214,9 +215,9 @@ if ! command -v curl > /dev/null && ! command -v wget > /dev/null; then
 fi
 
 if command -v curl > /dev/null 2>&1; then
-	download="curl -sLo"
+	download="curl --connect-timeout 3 --retry 1 -sLo"
 elif command -v wget > /dev/null 2>&1; then
-	download="wget -qO"
+	download="wget --timeout=3 --tries=1 -qO"
 fi
 
 # We depend on a container manager let's be sure we have it
@@ -311,6 +312,7 @@ if [ "${icon}" = "auto" ]; then
 		deepin:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/deepin-distrobox.png
 		fedora:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/fedora-distrobox.png
 		gentoo:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/gentoo-distrobox.png
+		kali:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/kali-distrobox.png
 		kdeneon:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/kdeneon-distrobox.png
 		opensuse-leap:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/opensuse-distrobox.png
 		opensuse-tumbleweed:https://raw.githubusercontent.com/89luca89/distrobox/main/docs/assets/png/distros/opensuse-distrobox.png
@@ -335,10 +337,17 @@ if [ "${icon}" = "auto" ]; then
 	fi
 
 	icon_url="$(echo "${DISTRO_ICON_MAP}" | grep "${container_distro}:" | cut -d':' -f2-)"
+
+	# Distro not found in our map, fallback to generic icon
+	if [ -z "${icon_url}" ]; then
+		icon_url="https://raw.githubusercontent.com/89luca89/distrobox/main/icons/terminal-distrobox-icon.svg"
+		container_distro="terminal-distrobox-icon"
+	fi
+
 	if [ -n "${icon_url}" ] && [ "${download}" != "null" ]; then
 		icon_extension="${icon_url##*.}"
 
-		if ${download} - "${icon_url}" > "${HOME}/.local/share/icons/distrobox/${container_distro}.${icon_extension}"; then
+		if [ "${online}" -lt 1 ] && ${download} - "${icon_url}" > "${HOME}/.local/share/icons/distrobox/${container_distro}.${icon_extension}"; then
 			icon="${HOME}/.local/share/icons/distrobox/${container_distro}.${icon_extension}"
 		else
 			# Wget failed for some reasons. Default to generic terminal icon as declared at the beginning.
@@ -363,6 +372,11 @@ NoDisplay=false
 Terminal=true
 TryExec=${distrobox_path}/distrobox
 Type=Application
+Actions=Remove;
+
+[Desktop Action Remove]
+Name=Remove ${entry_name} from system
+Exec=${distrobox_path}/distrobox rm ${extra_flags} ${container_name}
 EOF
 
 # Profiles for Konsole

@@ -36,6 +36,7 @@ root_flag=""
 # tmpfile will be used as a little buffer to pass variables without messing up
 # quoting and escaping
 tmpfile="$(mktemp -u)"
+tmp_download_file="$(mktemp -u)"
 verbose=0
 version="1.7.2.1"
 # initializing block of variables used in the manifest
@@ -63,7 +64,7 @@ exported_bins=""
 exported_bins_path="${HOME}/.local/bin"
 
 # Cleanup tmpfiles on exit
-trap 'rm -f ${tmpfile}' EXIT
+trap 'rm -f ${tmpfile} ${tmp_download_file}' EXIT
 
 # Despite of running this script via SUDO/DOAS being not supported (the
 # script itself will call the appropriate tool when necessary), we still want
@@ -133,7 +134,7 @@ Usage:
 
 Options:
 
-	--file:			path to the distrobox manifest/ini file
+	--file:			path or URL to the distrobox manifest/ini file
 	--name/-n:		run against a single entry in the manifest/ini file
 	--replace/-R:		replace already existing distroboxes with matching names
 	--dry-run/-d:		only print the container manager command generated
@@ -233,8 +234,19 @@ fi
 
 # Check if file effectively exists
 if [ ! -e "${input_file}" ]; then
-	printf >&2 "File %s does not exist.\n" "${input_file}"
-	exit 1
+
+	if command -v curl > /dev/null 2>&1; then
+		download="curl --connect-timeout 3 --retry 1 -sLo"
+	elif command -v wget > /dev/null 2>&1; then
+		download="wget --timeout=3 --tries=1 -qO"
+	fi
+
+	if ! ${download} - "${input_file}" > "${tmp_download_file}"; then
+		printf >&2 "File %s does not exist.\n" "${input_file}"
+		exit 1
+	else
+		input_file="${tmp_download_file}"
+	fi
 fi
 
 # run_distrobox will create distrobox with parameters parsed from ini file.
@@ -254,6 +266,28 @@ fi
 run_distrobox()
 {
 	name="${1}"
+	additional_flags=""
+	additional_packages=""
+	entry=""
+	home=""
+	hostname=""
+	image=""
+	init=""
+	init_hooks=""
+	nvidia=""
+	pre_init_hooks=""
+	pull=""
+	root=""
+	start_now=""
+	unshare_ipc=""
+	unshare_netns=""
+	unshare_process=""
+	unshare_devsys=""
+	unshare_all=""
+	volume=""
+	exported_apps=""
+	exported_bins=""
+	exported_bins_path="${HOME}/.local/bin"
 
 	# Skip item if --name used and no match is found
 	if [ "${boxname}" != "" ] && [ "${boxname}" != "${name}" ]; then
@@ -353,6 +387,8 @@ run_distrobox()
 				continue
 			fi
 
+			# Convert back from base64
+			arg="$(echo "${arg}" | base64 -d)"
 			args="${args} ${separator} ${arg}"
 
 			# Prepare for the next line, if we already have a ';' or '&&', do nothing
@@ -376,6 +412,8 @@ run_distrobox()
 				continue
 			fi
 
+			# Convert back from base64
+			arg="$(echo "${arg}" | base64 -d)"
 			args="${args} ${separator} ${arg}"
 
 			# Prepare for the next line, if we already have a ';' or '&&', do nothing
@@ -454,6 +492,28 @@ run_distrobox()
 	fi
 }
 
+# encode_variable will encode an input in base64, removing surrounding single/double quotes.
+# Arguments:
+#   variable: string
+# Expected global variables:
+#   None
+# Expected env variables:
+#   None
+# Outputs:
+#   a value string encoded in base64
+encode_variable()
+{
+	variable="${1}"
+	# remove surrounding quotes possibly added by the user
+	if echo "${variable}" | grep -qE '^"'; then
+		variable="$(echo "${variable}" | sed -e 's/^"//' -e 's/"$//')"
+	elif echo "${variable}" | grep -qE "^'"; then
+		variable="$(echo "${variable}" | sed -e "s/^'//" -e "s/'$//")"
+	fi
+
+	echo "${variable}" | base64 -w 0
+}
+
 # sanitize_variable will sanitize an input, add single/double quotes and escapes
 # Arguments:
 #   variable: string
@@ -471,7 +531,13 @@ sanitize_variable()
 	if echo "${variable}" | grep -q " " &&
 		! echo "${variable}" | grep -Eq "^'|^\""; then
 
-		variable="\"${variable}\""
+		# if we have double quotes we should wrap the whole line in single quotes
+		# in order to not "undo" them
+		if echo "${variable}" | grep -q '"'; then
+			variable="'${variable}'"
+		else
+			variable="\"${variable}\""
+		fi
 	fi
 
 	# Return
@@ -532,13 +598,22 @@ parse_file()
 		[ "${value}" = "false" ] && value=0
 
 		# Sanitize value, by whitespaces, quotes and escapes
-		value="$(sanitize_variable "${value}")"
+		if [ "${key}" = "init_hooks" ] || [ "${key}" = "pre_init_hooks" ]; then
+			# in case of shell commands (so the hooks) we prefer to pass the variable
+			# around encoded, so that we don't accidentally execute stuff
+			# and, we will execute sanitize_variable on the final string flag at the
+			# end, instead of key/value base.
+			value="$(encode_variable "${value}")"
+		else
+			value="$(sanitize_variable "${value}")"
+		fi
 
 		# Save options to tempfile, to source it later
 		touch "${tmpfile}"
 		if [ -n "${key}" ] && [ -n "${value}" ]; then
 			if grep -q "^${key}=" "${tmpfile}"; then
-				value="$(echo "${value}" | sed "s|\"|\" \${${key}}¤|")"
+				# make keys cumulative
+				value="\${${key}}¤${value}"
 			fi
 			echo "${key}=${value}" >> "${tmpfile}"
 		fi

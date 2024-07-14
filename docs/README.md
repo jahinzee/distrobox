@@ -193,7 +193,7 @@ Fedora Silverblue for the [uBlue](https://github.com/ublue-os) project
 ## Why
 
 - Provide a mutable environment on an immutable OS, like [ChromeOS, Endless OS,
-  Fedora Silverblue, OpenSUSE MicroOS, Vanilla OS](compatibility.md#host-distros), or [SteamOS3](posts/steamdeck_guide.md)
+  Fedora Silverblue, OpenSUSE Aeon/Kalpa, Vanilla OS](compatibility.md#host-distros), or [SteamOS3](posts/steamdeck_guide.md)
 - Provide a locally privileged environment for sudoless setups
   (eg. company-provided laptops, security reasons, etc...)
 - To mix and match a stable base system (eg. Debian Stable, Ubuntu LTS, RedHat)
@@ -258,7 +258,7 @@ as discussed here: [#28 Sandboxed mode](https://github.com/89luca89/distrobox/is
 
 **Create a new distrobox with Systemd (acts similar to an LXC):**
 
-`distrobox create --name test --init --image debian:latest --additional-packages "systemd libpam-systemd"`
+`distrobox create --name test --init --image debian:latest --additional-packages "systemd libpam-systemd pipewire-audio-client-libraries"`
 
 **Enter created distrobox:**
 
@@ -363,7 +363,11 @@ you can trust me and simply run this in your terminal:
 
 ```sh
 curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sudo sh
-# or using wget
+```
+
+or using wget
+
+```sh
 wget -qO- https://raw.githubusercontent.com/89luca89/distrobox/main/install | sudo sh
 ```
 
@@ -371,7 +375,11 @@ or if you want to select a custom directory to install without sudo:
 
 ```sh
 curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --prefix ~/.local
-# or using wget
+```
+
+or using wget
+
+```sh
 wget -qO- https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --prefix ~/.local
 ```
 
@@ -379,7 +387,11 @@ If you want to install the last development version, directly from the last comm
 
 ```sh
 curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sudo sh -s -- --next
-# or using wget
+```
+
+or using wget
+
+```sh
 wget -qO- https://raw.githubusercontent.com/89luca89/distrobox/main/install | sudo sh -s -- --next
 ```
 
@@ -387,7 +399,11 @@ or:
 
 ```sh
 curl -s https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --next --prefix ~/.local
-# or using wget
+```
+
+or using wget
+
+```sh
 wget -qO- https://raw.githubusercontent.com/89luca89/distrobox/main/install | sh -s -- --next --prefix ~/.local
 ```
 

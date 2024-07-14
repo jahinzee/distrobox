@@ -62,9 +62,9 @@ Distrobox has been successfully tested on:
 | Gentoo | | To setup rootless podman, look [HERE](https://wiki.gentoo.org/wiki/Podman) |
 | KDE neon | | `distrobox` is available in default repo |
 | Manjaro | | To setup rootless podman, look [HERE](https://wiki.archlinux.org/title/Podman) |
-| NixOS | 21.11 | Make sure to mind your executable paths. Sometimes a container will not have nix paths, and sometimes it will not have its own paths.  <br>  Distrobox is available in Nixpkg collection (thanks [AtilaSaraiva](https://github.com/AtilaSaraiva)!)< <br> To setup Docker, look [HERE](https://nixos.wiki/wiki/Docker)  <br> To setup Podman, look [HERE](https://nixos.wiki/wiki/Podman) and [HERE](https://gist.github.com/adisbladis/187204cb772800489ee3dac4acdd9947) |
+| NixOS | 21.11 | Make sure to mind your executable paths. Sometimes a container will not have nix paths, and sometimes it will not have its own paths.  <br>  Distrobox is available in Nixpkg collection (thanks [AtilaSaraiva](https://github.com/AtilaSaraiva)!)< <br> To setup Docker, look [HERE](https://wiki.nixos.org/wiki/Docker)  <br> To setup Podman, look [HERE](https://wiki.nixos.org/wiki/Podman) and [HERE](https://gist.github.com/adisbladis/187204cb772800489ee3dac4acdd9947) |
 | openSUSE | Leap 15.4 <br> Leap 15.3 <br> Leap 15.2 | Packages are available [here](https://software.opensuse.org/download/package?package=distrobox&project=home%3Adfaggioli%3Amicroos-desktop) (thanks [dfaggioli](https://github.com/dfaggioli)!).<br> To install on openSUSE Leap 15, Use the following repository links in the `zypper addrepo` command: [15.4](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/15.4/home:dfaggioli:microos-desktop.repo), [15.3](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/15.3/home:dfaggioli:microos-desktop.repo), [15.2](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/15.2/home:dfaggioli:microos-desktop.repo). Then: <br>  `zypper refresh && zypper install distrobox`. <br> `Podman` under SUSE Leap, cannot initialize correctly the containers managed by ``distrobox`` until [this openSUSE bug](https://bugzilla.opensuse.org/show_bug.cgi?id=1199871) is fixed, or ``podman`` logging is configured properly. |
-| openSUSE | Tumbleweed <br> MicroOS | `distrobox` is available in default repos (thanks [dfaggioli](https://github.com/dfaggioli)!) <br> For Tumbleweed, do: `zypper install distrobox`. <br> For MicroOS, **distrobox is installed by default**. |
+| openSUSE | Tumbleweed <br> Aeon/Kalpa | `distrobox` is available in default repos (thanks [dfaggioli](https://github.com/dfaggioli)!) <br> For Tumbleweed, do: `zypper install distrobox`. <br> For Aeon/Kalpa, **distrobox is installed by default**. |
 | SUSE Linux Enterprise Server | 15&nbsp;Service&nbsp;Pack&nbsp;4 <br> 15&nbsp;Service&nbsp;Pack&nbsp;3 <br> 15&nbsp;Service&nbsp;Pack&nbsp;2 | Same procedure as the one for openSUSE (Leap, respective versions, of course). Use the following repository links in the `zypper addrepo` command: [SLE-15-SP4](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/15.4/home:dfaggioli:microos-desktop.repo), [SLE-15-SP3](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/15.3/home:dfaggioli:microos-desktop.repo), [SLE-15-SP4](https://download.opensuse.org/repositories/home:dfaggioli:microos-desktop/SLE_15_SP2/home:dfaggioli:microos-desktop.repo). Then: <br>  `zypper refresh && zypper install distrobox`. <br> `Podman` under SUSE Leap, cannot initialize correctly the containers managed by ``distrobox`` until [this openSUSE bug](https://bugzilla.opensuse.org/show_bug.cgi?id=1199871) is fixed, or ``podman`` logging is configured properly. |
 | SteamOS | | You can follow the [Install Podman in a static manner](posts/install_podman_static.md) or [Install Lilipod in a static manner](posts/install_lilipod_static.md) guide, this will install it in your $HOME and it will survive updates. |
 | RedHat | 8 <br> 9  | `distrobox` is available in epel repos. (thanks [alcir](https://github.com/alcir)!) |
@@ -126,16 +126,18 @@ Distrobox guests tested successfully with the following container images:
 | RedHat (Toolbox) | 8 <br> 9 | registry.access.redhat.com/ubi8/toolbox <br> registry.access.redhat.com/ubi9/toolbox <br> quay.io/toolbx-images/rhel-toolbox:latest |
 | Rocky Linux (Toolbox) | 8 <br> 9 | quay.io/toolbx-images/rockylinux-toolbox:8 <br> quay.io/toolbx-images/rockylinux-toolbox:9 <br> quay.io/toolbx-images/rockylinux-toolbox:latest |
 | Ubuntu (Toolbox) | 16.04 <br> 18.04 <br> 20.04 <br> 22.04 | quay.io/toolbx/ubuntu-toolbox:16.04 <br> quay.io/toolbx/ubuntu-toolbox:18.04 <br> quay.io/toolbx/ubuntu-toolbox:20.04 <br> quay.io/toolbx/ubuntu-toolbox:22.04 <br> quay.io/toolbx/ubuntu-toolbox:latest |
+| Ublue | bluefin-cli | ghcr.io/ublue-os/bluefin-cli |
 |  |  |  |
 | AlmaLinux | 8 <br> 8-minimal <br> 9 <br> 9-minimal | docker.io/library/almalinux:8 <br> docker.io/library/almalinux:9  |
 | Alpine Linux    | 3.15 <br> 3.16 <br> 3.17 <br> 3.18 <br> 3.19 <br> edge | docker.io/library/alpine:3.15 <br> docker.io/library/alpine:3.16 <br> docker.io/library/alpine:3.17 <br> docker.io/library/alpine:3.18 <br> docker.io/library/alpine:3.19 <br> docker.io/library/alpine:edge <br> docker.io/library/alpine:latest |
 | AmazonLinux | 1 <br> 2 <br> 2023 | public.ecr.aws/amazonlinux/amazonlinux:1 <br> public.ecr.aws/amazonlinux/amazonlinux:2 <br>  public.ecr.aws/amazonlinux/amazonlinux:2023 |
 | Archlinux     | | docker.io/library/archlinux:latest    |
+| Blackarch     | | docker.io/blackarchlinux/blackarch:latest    |
 | CentOS Stream | 8 <br> 9 | quay.io/centos/centos:stream8 <br> quay.io/centos/centos:stream9  |
 | CentOS | 7 | quay.io/centos/centos:7  |
-| Chainguard Wolfi | Small note: sudo is missing, use su-exec instead. | cgr.dev/chainguard/wolfi-base:latest |
+| Chainguard Wolfi | | cgr.dev/chainguard/wolfi-base:latest |
 | ClearLinux |      | docker.io/library/clearlinux:latest <br> docker.io/library/clearlinux:base    |
-| Crystal Linux | | registry.getcryst.al/crystal/misc/docker:latest |
+| Crystal Linux | | registry.gitlab.com/crystal-linux/misc/docker:latest  |
 | Debian | 7 <br> 8 <br> 9 <br> 10 <br> 11 <br> 12 | docker.io/debian/eol:wheezy <br> docker.io/library/debian:buster <br> docker.io/library/debian:bullseye-backports <br> docker.io/library/debian:bookworm-backports <br> docker.io/library/debian:stable-backports |
 | Debian | Testing    | docker.io/library/debian:testing  <br>  docker.io/library/debian:testing-backports    |
 | Debian | Unstable | docker.io/library/debian:unstable    |
@@ -154,7 +156,7 @@ Distrobox guests tested successfully with the following container images:
 | Scientific Linux | 7 | docker.io/library/sl:7    |
 | Slackware | | docker.io/vbatts/slackware:current |
 | SteamOS | | ghcr.io/linuxserver/steamos:latest |
-| Ubuntu | 14.04 <br> 16.04 <br> 18.04 <br> 20.04 <br> 22.04 <br> 23.04 | docker.io/library/ubuntu:14.04 <br> docker.io/library/ubuntu:16.04 <br> docker.io/library/ubuntu:18.04 <br> docker.io/library/ubuntu:20.04 <br> docker.io/library/ubuntu:22.04 |
+| Ubuntu | 14.04 <br> 16.04 <br> 18.04 <br> 20.04 <br> 22.04 <br> 23.04 | docker.io/library/ubuntu:14.04 <br> docker.io/library/ubuntu:16.04 <br> docker.io/library/ubuntu:18.04 <br> docker.io/library/ubuntu:20.04 <br> docker.io/library/ubuntu:22.04 <br> docker.io/library/ubuntu:23.04 |
 | Vanilla OS | VSO | ghcr.io/vanilla-os/vso:main |
 | Void Linux | glibc <br> musl | ghcr.io/void-linux/void-glibc-full:latest <br> ghcr.io/void-linux/void-musl-full:latest |
 
