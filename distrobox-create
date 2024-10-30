@@ -104,7 +104,7 @@ distrobox_hostexec_path="$(cd "$(dirname "${0}")" && pwd)/distrobox-host-exec"
 # There's no need for them to pass the --root flag option in such cases.
 [ "${container_user_uid}" -eq 0 ] && rootful=1 || rootful=0
 verbose=0
-version="1.7.2.1"
+version="1.8.0"
 
 app_cache_dir=${XDG_CACHE_HOME:-"${HOME}/.cache"}/distrobox
 
@@ -374,7 +374,8 @@ while :; do
 			;;
 		-H | --home)
 			if [ -n "$2" ]; then
-				container_user_custom_home="$2"
+				# Remove trailing slashes
+				container_user_custom_home="$(echo "$2" | sed 's:/*$::')"
 				shift
 				shift
 			fi
@@ -1047,6 +1048,8 @@ if eval ${cmd} > /dev/null; then
 			"${distrobox_genentry_path}" "${container_name}"
 		fi
 	fi
-	exit $?
+else
+	error="$?"
+	printf >&2 "\033[31m [ ERR ]\033[0m failed to create container.\n"
+	exit "${error}"
 fi
-printf >&2 "\033[31m [ ERR ]\n\033[0m"

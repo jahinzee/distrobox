@@ -51,10 +51,10 @@ container_manager="autodetect"
 container_name_default="my-distrobox"
 delete=0
 icon="auto"
-icon_default="${HOME}/.local/share/icons/terminal-distrobox-icon.svg"
+icon_default="${XDG_DATA_HOME:-${HOME}/.local/share}/icons/terminal-distrobox-icon.svg"
 verbose=0
 online=0
-version="1.7.2.1"
+version="1.8.0"
 
 # Source configuration files, this is done in an hierarchy so local files have
 # priority over system defaults
@@ -98,9 +98,8 @@ done
 #   None
 # Outputs:
 #   print usage with examples.
-show_help()
-{
-	cat << EOF
+show_help() {
+	cat <<EOF
 distrobox version: ${version}
 
 Usage:
@@ -122,57 +121,57 @@ EOF
 # Parse arguments
 while :; do
 	case $1 in
-		-h | --help)
-			# Call a "show_help" function to display a synopsis, then exit.
-			show_help
-			exit 0
-			;;
-		-v | --verbose)
-			verbose=1
+	-h | --help)
+		# Call a "show_help" function to display a synopsis, then exit.
+		show_help
+		exit 0
+		;;
+	-v | --verbose)
+		verbose=1
+		shift
+		;;
+	-V | --version)
+		printf "distrobox: %s\n" "${version}"
+		exit 0
+		;;
+	-d | --delete)
+		delete=1
+		shift
+		;;
+	-a | --all)
+		all=1
+		shift
+		;;
+	-i | --icon)
+		if [ -n "$2" ]; then
+			icon="$2"
 			shift
-			;;
-		-V | --version)
-			printf "distrobox: %s\n" "${version}"
-			exit 0
-			;;
-		-d | --delete)
-			delete=1
 			shift
-			;;
-		-a | --all)
-			all=1
+		fi
+		;;
+	-r | --root)
+		shift
+		rootful=1
+		;;
+	--) # End of all options.
+		shift
+		break
+		;;
+	-*) # Invalid options.
+		printf >&2 "ERROR: Invalid flag '%s'\n\n" "$1"
+		show_help
+		exit 1
+		;;
+	*) # Default case: If no more options then break out of the loop.
+		# If we have a flagless option and container_name is not specified
+		# then let's accept argument as container_name
+		if [ -n "$1" ]; then
+			container_name="$1"
 			shift
-			;;
-		-i | --icon)
-			if [ -n "$2" ]; then
-				icon="$2"
-				shift
-				shift
-			fi
-			;;
-		-r | --root)
-			shift
-			rootful=1
-			;;
-		--) # End of all options.
-			shift
+		else
 			break
-			;;
-		-*) # Invalid options.
-			printf >&2 "ERROR: Invalid flag '%s'\n\n" "$1"
-			show_help
-			exit 1
-			;;
-		*) # Default case: If no more options then break out of the loop.
-			# If we have a flagless option and container_name is not specified
-			# then let's accept argument as container_name
-			if [ -n "$1" ]; then
-				container_name="$1"
-				shift
-			else
-				break
-			fi
-			;;
+		fi
+		;;
 	esac
 done
 
@@ -202,66 +201,66 @@ fi
 # If we delete, just ask confirmation and exit.
 if [ "${delete}" -ne 0 ]; then
 	rm -f "${HOME}/.local/share/applications/${container_name}.desktop"
-	if [ -d "${HOME}/.local/share/konsole" ]; then
-		rm -f "${HOME}/.local/share/konsole/${container_name}.profile"
+	if [ -d "${XDG_DATA_HOME:-${HOME}/.local/share}/konsole" ]; then
+		rm -f "${XDG_DATA_HOME:-${HOME}/.local/share}/konsole/${container_name}.profile"
 	fi
 	exit
 fi
 
-if ! command -v curl > /dev/null && ! command -v wget > /dev/null; then
+if ! command -v curl >/dev/null && ! command -v wget >/dev/null; then
 	printf >&2 "Icon generation depends on either curl or wget\n"
 	printf >&2 "Fallbacking to default icon.\n"
 	download="null"
 fi
 
-if command -v curl > /dev/null 2>&1; then
+if command -v curl >/dev/null 2>&1; then
 	download="curl --connect-timeout 3 --retry 1 -sLo"
-elif command -v wget > /dev/null 2>&1; then
+elif command -v wget >/dev/null 2>&1; then
 	download="wget --timeout=3 --tries=1 -qO"
 fi
 
 # We depend on a container manager let's be sure we have it
 # First we use podman, else docker, else lilipod
 case "${container_manager}" in
-	autodetect)
-		if command -v podman > /dev/null; then
-			container_manager="podman"
-			container_manager_cp_command="podman cp"
-		elif command -v podman-launcher > /dev/null; then
-			container_manager="podman-launcher"
-			container_manager_cp_command="podman-launcher cp"
-		elif command -v docker > /dev/null; then
-			container_manager="docker"
-			container_manager_cp_command="docker cp -L"
-		elif command -v lilipod > /dev/null; then
-			container_manager="lilipod"
-			container_manager_cp_command="lilipod cp"
-		fi
-		;;
-	podman)
+autodetect)
+	if command -v podman >/dev/null; then
 		container_manager="podman"
 		container_manager_cp_command="podman cp"
-		;;
-	podman-launcher)
+	elif command -v podman-launcher >/dev/null; then
 		container_manager="podman-launcher"
 		container_manager_cp_command="podman-launcher cp"
-		;;
-	lilipod)
-		container_manager="lilipod"
-		container_manager_cp_command="lilipod cp"
-		;;
-	docker)
+	elif command -v docker >/dev/null; then
 		container_manager="docker"
 		container_manager_cp_command="docker cp -L"
-		;;
-	*)
-		printf >&2 "Invalid input %s.\n" "${container_manager}"
-		printf >&2 "The available choices are: 'autodetect', 'podman', 'docker', 'lilipod'\n"
-		;;
+	elif command -v lilipod >/dev/null; then
+		container_manager="lilipod"
+		container_manager_cp_command="lilipod cp"
+	fi
+	;;
+podman)
+	container_manager="podman"
+	container_manager_cp_command="podman cp"
+	;;
+podman-launcher)
+	container_manager="podman-launcher"
+	container_manager_cp_command="podman-launcher cp"
+	;;
+lilipod)
+	container_manager="lilipod"
+	container_manager_cp_command="lilipod cp"
+	;;
+docker)
+	container_manager="docker"
+	container_manager_cp_command="docker cp -L"
+	;;
+*)
+	printf >&2 "Invalid input %s.\n" "${container_manager}"
+	printf >&2 "The available choices are: 'autodetect', 'podman', 'docker', 'lilipod'\n"
+	;;
 esac
 
 # Be sure we have a container manager to work with.
-if ! command -v "${container_manager}" > /dev/null; then
+if ! command -v "${container_manager}" >/dev/null; then
 	# Error: we need at least one between docker, podman or lilipod.
 	printf >&2 "Missing dependency: we need a container manager.\n"
 	printf >&2 "Please install one of podman,  docker or lilipod.\n"
@@ -285,14 +284,14 @@ if [ "${rootful}" -ne 0 ]; then
 	container_manager_cp_command="${distrobox_sudo_program:-"sudo"} ${container_manager_cp_command}"
 fi
 
-if ! ${container_manager} inspect --type container "${container_name}" > /dev/null; then
+if ! ${container_manager} inspect --type container "${container_name}" >/dev/null; then
 	printf >&2 "Cannot find container %s. Please create it first.\n" "${container_name}"
 	exit 1
 fi
 
 # Ensure the destination dir exists.
-mkdir -p "${HOME}/.local/share/applications"
-mkdir -p "${HOME}/.local/share/icons/distrobox"
+mkdir -p "${XDG_DATA_HOME:-${HOME}/.local/share}/applications"
+mkdir -p "${XDG_DATA_HOME:-${HOME}/.local/share}/icons/distrobox"
 
 distrobox_path="$(dirname "$(realpath "${0}")")"
 entry_name="$(echo "${container_name}" | cut -c1 | tr "[:lower:]" "[:upper:]")$(echo "${container_name}" | cut -c2-)"
@@ -347,8 +346,8 @@ if [ "${icon}" = "auto" ]; then
 	if [ -n "${icon_url}" ] && [ "${download}" != "null" ]; then
 		icon_extension="${icon_url##*.}"
 
-		if [ "${online}" -lt 1 ] && ${download} - "${icon_url}" > "${HOME}/.local/share/icons/distrobox/${container_distro}.${icon_extension}"; then
-			icon="${HOME}/.local/share/icons/distrobox/${container_distro}.${icon_extension}"
+		if [ "${online}" -lt 1 ] && ${download} - "${icon_url}" >"${XDG_DATA_HOME:-${HOME}/.local/share}/icons/distrobox/${container_distro}.${icon_extension}"; then
+			icon="${XDG_DATA_HOME:-${HOME}/.local/share}/icons/distrobox/${container_distro}.${icon_extension}"
 		else
 			# Wget failed for some reasons. Default to generic terminal icon as declared at the beginning.
 			printf >&2 "Warning: Failed to download icon. Defaulting to generic one.\n"
@@ -359,7 +358,7 @@ if [ "${icon}" = "auto" ]; then
 	fi
 fi
 
-cat << EOF > "${HOME}/.local/share/applications/${container_name}.desktop"
+cat <<EOF >"${XDG_DATA_HOME:-${HOME}/.local/share}/applications/${container_name}.desktop"
 [Desktop Entry]
 Name=${entry_name}
 GenericName=Terminal entering ${entry_name}
@@ -381,13 +380,13 @@ EOF
 
 # Profiles for Konsole
 if [ -d "${HOME}/.local/share/konsole" ]; then
-if [ -f "${HOME}/.config/konsolerc" ]; then
-	# Use Konsole's main profile as the parent, else use "FALLBACK/".
-	konsole_profile_parent="$(grep DefaultProfile "${HOME}/.config/konsolerc" | cut -c16-)"
-else
-	konsole_profile_parent="FALLBACK/"
-fi
-cat << EOF > "${HOME}/.local/share/konsole/${container_name}.profile"
+	if [ -f "${HOME}/.config/konsolerc" ]; then
+		# Use Konsole's main profile as the parent, else use "FALLBACK/".
+		konsole_profile_parent="$(grep DefaultProfile "${HOME}/.config/konsolerc" | cut -c16-)"
+	else
+		konsole_profile_parent="FALLBACK/"
+	fi
+	cat <<EOF >"${HOME}/.local/share/konsole/${container_name}.profile"
 [General]
 Command=${distrobox_path}/distrobox enter ${extra_flags} ${container_name}
 Icon=${icon}

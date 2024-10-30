@@ -74,7 +74,7 @@ pre_init_hook=""
 rootful=0
 upgrade=0
 verbose=0
-version="1.7.2.1"
+version="1.8.0"
 
 # show_help will print usage to stdout.
 # Arguments:
@@ -388,12 +388,18 @@ mount_bind()
 	fi
 
 	# Add mountflags if needed, if no are specified, use rslave as default.
-	if [ "${mount_flags}" = "" ]; then
-		mount_flags="rslave"
-	fi
 	# bind mount source_dir to target_dir, return error if not successful
-	if ! mount --rbind -o "${mount_flags}" "${source_dir}" "${target_dir}"; then
-		printf "Warning: failed to bind mount %s to %s\n" "${source_dir}" "${target_dir}"
+	if [ "${mount_flags}" = "" ]; then
+		if ! mount --rbind "${source_dir}" "${target_dir}"; then
+			printf "Warning: failed to bind mount %s to %s\n" "${source_dir}" "${target_dir}"
+			return 1
+		fi
+		if ! mount --make-rslave "${target_dir}"; then
+			printf "Warning: failed to make rslave to %s\n" "${target_dir}"
+			return 1
+		fi
+	elif ! mount --rbind -o "${mount_flags}" "${source_dir}" "${target_dir}"; then
+		printf "Warning: failed to bind mount %s to %s using option %s\n" "${source_dir}" "${target_dir}" "${mount_flags}"
 		return 1
 	fi
 
@@ -737,7 +743,7 @@ setup_apt()
 	# If we need to upgrade, do it and exit, no further action required.
 	if [ "${upgrade}" -ne 0 ]; then
 		apt-get update
-		apt-get upgrade -y
+		apt-get upgrade -o Dpkg::Options::="--force-confold" -y
 		exit
 	fi
 	# In Ubuntu official images, dpkg is configured to ignore locale and docs
@@ -802,6 +808,7 @@ setup_apt()
 		xz-utils
 		zip
 		libgl1
+		libegl-mesa0
 		libegl1-mesa
 		libgl1-mesa-glx
 		libegl1
@@ -1176,14 +1183,6 @@ setup_pacman()
 	sed -i "s|NoExtract.*||g" /etc/pacman.conf
 	sed -i "s|NoProgressBar.*||g" /etc/pacman.conf
 
-	# In case the locale is not available, install it
-	# will ensure we don't fallback to C.UTF-8
-	if ! locale -a | grep -qi en_us.utf8 || ! locale -a | grep -qi "${HOST_LOCALE}"; then
-		sed -i "s|#.*en_US.UTF-8|en_US.UTF-8|g" /etc/locale.gen
-		sed -i "s|#.*${HOST_LOCALE}|${HOST_LOCALE}|g" /etc/locale.gen
-		locale-gen -a
-	fi
-
 	pacman -S -u --noconfirm
 	# Check if shell_pkg is available in distro's repo. If not we
 	# fall back to bash, and we set the SHELL variable to bash so
@@ -1200,6 +1199,7 @@ setup_pacman()
 		findutils
 		glibc
 		gnupg
+		iputils
 		inetutils
 		keyutils
 		less
@@ -1237,6 +1237,10 @@ setup_pacman()
 	# shellcheck disable=SC2086,2046
 	pacman -S --needed --noconfirm $(pacman -Ssq | grep -E "^($(echo ${deps} | tr ' ' '|'))$")
 
+	if [ ! -e "/usr/share/i18n/locales${HOST_LOCALE}" ]; then
+		pacman -S --noconfirm glibc
+	fi
+
 	# Setup hooks
 	setup_pacman_exceptions
 
@@ -1245,6 +1249,14 @@ setup_pacman()
 	# ensure population
 	if [ ! -e /usr/share/zoneinfo/UTC ]; then
 		pacman -S --noconfirm tzdata
+	fi
+
+	# In case the locale is not available, install it
+	# will ensure we don't fallback to C.UTF-8
+	if ! locale -a | grep -qi en_us.utf8 || ! locale -a | grep -qi "${HOST_LOCALE}"; then
+		sed -i "s|#.*en_US.UTF-8|en_US.UTF-8|g" /etc/locale.gen
+		sed -i "s|#.*${HOST_LOCALE}|${HOST_LOCALE}|g" /etc/locale.gen
+		locale-gen -a
 	fi
 
 	# Install additional packages passed at distrbox-create time
@@ -1856,8 +1868,6 @@ if [ "${nvidia}" -eq 1 ]; then
 	# First we find all non-lib files we need, this includes
 	#	- binaries
 	#	- confs
-	#	- egl files
-	#	- icd files
 	#	Excluding here the libs, we will threat them later specifically
 	NVIDIA_FILES="$(find /run/host/etc/ /run/host/usr/ \
 		-path "/run/host/usr/lib/i386-linux-gnu/*" -prune -o \
@@ -1865,7 +1875,34 @@ if [ "${nvidia}" -eq 1 ]; then
 		-path "/run/host/usr/lib32/*" -prune -o \
 		-path "/run/host/usr/lib64/*" -prune -o \
 		-path "/run/host/usr/lib/*" -prune -o \
+		-path "/run/host/usr/share/*" -prune -o \
+		-path "/run/host/usr/src/*" -prune -o \
+		-path "/run/host/usr/include/*" -prune -o \
+		-path "*.png" -prune -o \
+		-path "*.svg" -prune -o \
+		-path "*.repo" -prune -o \
 		-iname "*nvidia*" -not -type d -print 2> /dev/null || :)"
+	for nvidia_file in ${NVIDIA_FILES}; do
+		dest_file="$(printf "%s" "${nvidia_file}" | sed 's|/run/host||g')"
+
+		# Mounting read-only in a user namespace will trigger a check to see if certain
+		# "locked" flags (line noexec,nodev,nosuid) are changed. This ensures we explicitly reuse those flags.
+		locked_flags="$(get_locked_mount_flags "${nvidia_file}")"
+		mount_bind "${nvidia_file}" "${dest_file}" ro"${locked_flags:+,${locked_flags}}"
+	done
+
+	# First we find all non-lib files we need, this includes
+	#	- egl files
+	#	- icd files
+	#	- doc files
+	#	- src files
+	#	Excluding here the libs, we will threat them later specifically
+	NVIDIA_FILES="$(find \
+		/run/host/usr/share/*nvidia* \
+		/run/host/usr/share/*vulkan* \
+		/run/host/usr/share/doc/*nvidia* \
+		/run/host/usr/src/*nvidia* \
+		-not -type d -print 2> /dev/null || :)"
 	for nvidia_file in ${NVIDIA_FILES}; do
 		dest_file="$(printf "%s" "${nvidia_file}" | sed 's|/run/host||g')"
 
@@ -2026,8 +2063,8 @@ fi
 # toolbx prompt: https://github.com/containers/toolbox/blob/main/profile.d/toolbox.sh#L47
 # this will ensure greater compatibility between the two implementations
 if [ -f /run/.toolboxenv ]; then
-    [ "\${BASH_VERSION:-}" != "" ] && PS1="📦[\u@\$CONTAINER_ID \W]\$ "
-    [ "\${ZSH_VERSION:-}" != "" ] && PS1="📦[%n@\$CONTAINER_ID]%~%# "
+    [ "\${BASH_VERSION:-}" != "" ] && export PS1="📦[\u@\$CONTAINER_ID \W]\$ "
+    [ "\${ZSH_VERSION:-}" != "" ] && export PS1="📦[%n@\$CONTAINER_ID]%~%# "
 fi
 
 # This will ensure we have a first-shell password setup for an user if needed.
@@ -2080,6 +2117,10 @@ if status --is-interactive
 		trap "echo; exit" INT
 		passwd && rm -f /var/tmp/.\$USER.passwd.initialize
 		trap - INT
+	end
+	function fish_prompt
+		set current_dir (basename (pwd))
+		echo "📦[\$USER@\$CONTAINER_ID \$current_dir]> "
 	end
 end
 EOF
